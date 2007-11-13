@@ -1,0 +1,116 @@
+The turnin vulnerability:
+
+		void setup(char *arg) {
+
+			// ...
+	
+	        be_user();
+    	    rundir = getcwd((char*) malloc(256), 256);
+	        if (!rundir) {
+	        	perror("getcwd");
+    	    	exit(1);
+        	}
+        
+        // later...
+        
+		void writelog(void) {
+			char b[256];
+			int fd,n,x;
+			time_t now = time(0);
+			
+			sprintf(b, "tv%s: %-8s %s %3d %s\n",
+				turninversion,
+				user_name, 
+				timestamp(now),
+				nfiles+nsymlinks,
+				rundir
+ 			);
+
+What's wrong with this picture?
+
+What you have: a sprintf stack buffer overflow in the writelog function that
+lets you overwrite its return address and a limited amount of data after this on
+the stack.
+
+What you want: a root shell on the real CSIL/GSL machines.
+
+What are the challenges? Remember that CSIL/GSL machines run Fedora Core:
+
+	- Fully randomized stack and heap addresses
+	- Executable code segments are all read-only
+	- Static data segments are also read-only (and not executable)
+	- Libc is mapped into memory 0x00877000 - 0x00991000
+		-> Note that the high byte is null for all addresses
+
+What is the impact of these challenges?
+
+	- There are no segments that are both writable and executable
+		-> Can't execute code that you've injected
+		-> Can ONLY execute code that's already in the turnin
+		   program or in libraries loaded by it (executable)
+	- No way to determine addresses of injected data
+		-> Can't directly access or use injected data
+	- Can't overwrite static defined in program or libraries
+	- Can't return into libc directly:
+		-> The last byte (remember x86 is little-endian) for all
+		   addresses in libc are null.
+		-> Any address in libc included in the overflow buffer
+		   will terminate the copying of the data into the buffer
+		-> Null will get replaced by "\n" (0x0a) in sprintf,
+		   which results in a completely invalid, useless address
+
+So, what can we do?
+
+	- Return into code in the main binary and in other libraries
+	- Return into libc indirectly via some other location (where?)
+	- Modify data in writable parts of memory whose location is fixed
+		-> In particular, global pointers are stored at a writable,
+		   fixed location in the program memory
+
+Finally, what do we need to do to get a root shell?
+
+	- Become root by calling setuid(0)
+	- Exec (not system) a shell somehow
+
+The solution I came up with is to first jump indirectly into strcpy via the PLT.
+The call to strcpy is used to overwrite the value of the "compresscmd" pointer,
+which is stored at a known location with the value of the "assignment" pointer,
+which is also stored at a known location. Note that we do not overwrite the
+"compresscmd" string with the "assignment" string; this is impossible because
+the "compresscmd" string is stored in static, read-only memory. Instead, we are
+treating the location where the pointers are stored as strings to pass to strpcy
+via their addresses. This will overwrite a good bit of memory after the actual 
+address, but we don't really care about that.
+
+Next we use the chaining call technique: when strcpy returns, it control will
+jump to the address immediately after where the previous return address is
+stored---the one we overwrote with the address of the strcpy PLT entry. Now that
+we've made "compresscmd" point at the string contained in "assgnment", we jump 
+into the middle of the "maketar" function at the point where it calls
+
+	execl(compresscmd,"compress",0);
+
+Now, to make this spawn a root shell, we need to make sure that the string
+originally pointed to by "assignment" contains the path of a wrapper program
+that calls setuid(0) and the execs a shell. Fortunately, turnin doesn't do any
+sort of sanitization on the assignment name. So all we have to do make sure that
+the directory "~class/TURNIN/tmp/wrapper" exists. Of course, to do this we need 
+to be able to create directories in class's home directory. However, we can 
+turnin to any user we want, including ourselves.
+
+So to make the exploit work, we make a directory that has a name long enough 
+that it causes the "b" buffer in "writelog" to overflow and write the following 
+four addresses beginning where the return address was before on the stack:
+
+	[ address of strcpy PLT entry                   ] <== return
+	[ address to jump to in maketar                 ]     address
+	[ address where "compresscmd" pointer is stored ]     location
+	[ address where "assignment" pointer is stored  ]
+	
+Then we create the directory "~/TURNIN/tmp/wrapper/foo" and create a file named
+"bar" in it. We also make a wrapper binary called "/tmp/wrapper". Finally, we
+run
+
+	$ turnin /tmp/wrapper@$USER foo
+
+Turnin will give a couple of prompts and then kindly drop us into a root shell.
