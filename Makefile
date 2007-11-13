@@ -21,10 +21,10 @@ wrapper: wrapper.c
 $(PWD)/turnin: turnin.c
 	gcc -g -o $@ $< $(DEFINES)
 	if test -z "$(NOSETUID)"; \
-	then \
-		sudo chown root:users $@; \
-		sudo chmod u=rwsx,go=rx $@; \
-	fi
+  then \
+    sudo chown root:users $@; \
+    sudo chmod u=rwsx,go=rx $@; \
+  fi
 
 exploit.addrs: $(turnin)
 	./get_addrs.pl $^ > $@
