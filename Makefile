@@ -1,10 +1,13 @@
+VERBOSE=1
+NOSETUID=1
+UID=$(shell id -u)
+
 turnin=$(PWD)/turnin
 
 DEFINES=\
 	$(if $(NOSETUID),-DNOSETUID)\
 	$(if $(VERBOSE),-DVERBOSE)\
 	$(if $(DUMPMEM),-DDUMPMEM)\
-	$(if $(HELLO),-DHELLO)\
 	$(if $(UID),-DUID=$(UID))
 
 default: exploit
