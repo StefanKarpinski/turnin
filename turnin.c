@@ -41,6 +41,7 @@
  *    turnin  assignmt@class   files-and-directories
  */
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
