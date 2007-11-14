@@ -1,6 +1,6 @@
 VERBOSE=1
-NOSETUID=1
-UID=$(shell id -u)
+#NOSETUID=1
+UID=$(if $(NOSETUID),$(shell id -u),0)
 
 turnin=$(PWD)/turnin
 
