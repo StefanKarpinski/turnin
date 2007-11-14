@@ -18,6 +18,8 @@ wrapper: wrapper.c
 /tmp/wrapper: wrapper
 	cp -f $< $@
 
+turnin: $(turnin)
+
 $(PWD)/turnin: turnin.c
 	gcc -g -o $@ $< $(DEFINES)
 	if test -z "$(NOSETUID)"; \
@@ -47,5 +49,5 @@ clean: cleanup
 cleanall: clean
 	rm -f turnin
 
-.PHONY: setup exploit cleanup clean cleanall
+.PHONY: turnin exploit cleanup clean cleanall
 
