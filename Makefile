@@ -12,6 +12,9 @@ DEFINES=\
 
 default: exploit
 
+sync:
+	rsync -rluv $(VMHOST):projects/turnin ~/
+
 wrapper: wrapper.c
 	gcc -o $@ $^ $(DEFINES)
 
