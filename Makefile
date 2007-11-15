@@ -12,6 +12,9 @@ DEFINES=\
 
 default: exploit
 
+tunnel:
+	ssh -NR1234:localhost:22 $(VMHOST)
+
 sync:
 	rsync -rluv $(VMHOST):projects/turnin ~/
 
